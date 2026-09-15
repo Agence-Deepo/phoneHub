@@ -11,18 +11,12 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-production}
       DB_CONNECTION: mysql
-      DB_HOST: host.docker.internal
+      DB_HOST: 172.239.44.174
       DB_PORT: "3306"
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
     volumes:
       - ./.env:/var/www/html/.env:ro
       - phonehub_storage:/var/www/html/storage
-    healthcheck:
-      test: ["CMD-SHELL", "php -r \"exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);\""]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 90s
     networks:
       - phonehub
 
@@ -34,8 +28,7 @@ services:
     ports:
       - "${APP_PORT:-80}:80"
     depends_on:
-      app:
-        condition: service_healthy
+      - app
     networks:
       - phonehub
 
