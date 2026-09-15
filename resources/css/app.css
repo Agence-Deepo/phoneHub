@@ -1,0 +1,442 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --color-ink: #1a1d26;
+    --color-muted: #6b7285;
+    --color-canvas: #eef0f5;
+    --color-surface: #ffffff;
+    --color-accent: #ff6a3d;
+    --color-blue: #3b7cff;
+    --color-mint: #22c55e;
+    --color-rose: #f472b6;
+    --color-sky: #38bdf8;
+}
+
+@layer base {
+    body {
+        font-family: var(--font-sans);
+        color: var(--color-ink);
+        background:
+            radial-gradient(1200px 500px at 10% -10%, rgba(59, 124, 255, 0.12), transparent 60%),
+            radial-gradient(900px 400px at 90% 0%, rgba(255, 106, 61, 0.10), transparent 55%),
+            var(--color-canvas);
+        min-height: 100vh;
+    }
+}
+
+@layer components {
+    .gl-card {
+        background: var(--color-surface);
+        border-radius: 1.75rem;
+        box-shadow: 0 10px 30px rgba(26, 29, 38, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+    }
+
+    .gl-nav {
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(16px);
+        border-radius: 1.5rem;
+        box-shadow: 0 8px 28px rgba(26, 29, 38, 0.08);
+    }
+
+    @media (min-width: 768px) {
+        .gl-nav {
+            border-radius: 999px;
+        }
+    }
+
+    .gl-nav-link {
+        @apply px-4 py-2 text-sm font-medium text-[var(--color-muted)] transition;
+        border-radius: 999px;
+    }
+
+    .gl-nav-link:hover {
+        color: var(--color-ink);
+        background: rgba(26, 29, 38, 0.04);
+    }
+
+    .gl-nav-link.is-active {
+        background: var(--color-ink);
+        color: white;
+    }
+
+    .gl-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        background: rgba(26, 29, 38, 0.06);
+        color: var(--color-ink);
+        transition: background 0.15s ease;
+    }
+
+    .gl-menu-btn:hover {
+        background: rgba(26, 29, 38, 0.1);
+    }
+
+    .gl-mobile-panel {
+        border-top: 1px solid rgba(26, 29, 38, 0.06);
+        padding-top: 0.5rem;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    .gl-btn {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition;
+        border-radius: 999px;
+    }
+
+    .gl-btn-primary {
+        background: var(--color-blue);
+        color: white;
+    }
+
+    .gl-btn-primary:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    .gl-btn-soft {
+        background: rgba(26, 29, 38, 0.06);
+        color: var(--color-ink);
+    }
+
+    .gl-btn-soft:hover {
+        background: rgba(26, 29, 38, 0.1);
+    }
+
+    .gl-btn-danger {
+        background: rgba(239, 68, 68, 0.12);
+        color: #dc2626;
+    }
+
+    .gl-btn-success {
+        background: rgba(34, 197, 94, 0.14);
+        color: #15803d;
+    }
+
+    .gl-input {
+        @apply w-full px-4 py-3 text-sm outline-none transition;
+        background: #f6f7fb;
+        border: 1px solid transparent;
+        border-radius: 1rem;
+    }
+
+    .gl-input:focus {
+        border-color: rgba(59, 124, 255, 0.45);
+        background: white;
+        box-shadow: 0 0 0 4px rgba(59, 124, 255, 0.12);
+    }
+
+    .gl-pill {
+        @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold;
+        border-radius: 999px;
+    }
+
+    .gl-pill-online {
+        background: rgba(34, 197, 94, 0.14);
+        color: #15803d;
+    }
+
+    .gl-pill-offline {
+        background: rgba(107, 114, 133, 0.14);
+        color: #4b5563;
+    }
+
+    .gl-pill-starting {
+        background: rgba(59, 124, 255, 0.14);
+        color: #1d4ed8;
+    }
+
+    .gl-pill-error {
+        background: rgba(239, 68, 68, 0.14);
+        color: #dc2626;
+    }
+
+    .gl-bar {
+        height: 8px;
+        border-radius: 999px;
+        background: #eef0f5;
+        overflow: hidden;
+    }
+
+    .gl-bar > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+    }
+
+    .gl-insight {
+        background: linear-gradient(135deg, #3b7cff 0%, #ff8a4c 100%);
+        color: white;
+        border-radius: 1.75rem;
+    }
+
+    .animate-rise {
+        animation: rise 0.55s ease both;
+    }
+
+    .animate-rise-delay-1 { animation-delay: 0.08s; }
+    .animate-rise-delay-2 { animation-delay: 0.16s; }
+    .animate-rise-delay-3 { animation-delay: 0.24s; }
+
+    @keyframes rise {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .chart-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        height: 180px;
+    }
+
+    .chart-bars .bar {
+        flex: 1;
+        border-radius: 12px 12px 6px 6px;
+        background: linear-gradient(180deg, #5b9bff 0%, #2f6fff 100%);
+        position: relative;
+        box-shadow: inset -6px 0 0 rgba(255, 255, 255, 0.18);
+        animation: grow 0.7s ease both;
+    }
+
+    .chart-bars .bar::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 6px,
+            rgba(255, 255, 255, 0.12) 6px,
+            rgba(255, 255, 255, 0.12) 12px
+        );
+        border-radius: inherit;
+        opacity: 0.5;
+    }
+
+    @keyframes grow {
+        from { transform: scaleY(0.2); transform-origin: bottom; opacity: 0.4; }
+        to { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+    }
+
+    .dot-stack {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .dot-stack i {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #d7dbe7;
+        display: block;
+    }
+
+    .dot-stack i.on {
+        background: #22c55e;
+    }
+
+    .dot-stack i.peak {
+        background: #3b7cff;
+    }
+
+    .gl-view-toggle {
+        display: inline-flex;
+        padding: 4px;
+        border-radius: 999px;
+        background: rgba(26, 29, 38, 0.06);
+        gap: 2px;
+    }
+
+    .gl-view-toggle button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--color-muted);
+        transition: all 0.2s ease;
+    }
+
+    .gl-view-toggle button.is-active {
+        background: white;
+        color: var(--color-ink);
+        box-shadow: 0 2px 8px rgba(26, 29, 38, 0.08);
+    }
+
+    .phone-device {
+        width: 100%;
+        max-width: 168px;
+        margin-inline: auto;
+        aspect-ratio: 9 / 19.2;
+        border-radius: 1.55rem;
+        padding: 8px;
+        background: linear-gradient(160deg, #2a2e38 0%, #12141a 100%);
+        box-shadow:
+            0 18px 40px rgba(26, 29, 38, 0.22),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        position: relative;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .phone-device:hover {
+        transform: translateY(-6px);
+        box-shadow:
+            0 26px 48px rgba(26, 29, 38, 0.28),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .phone-device::before {
+        content: '';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 56px;
+        height: 6px;
+        border-radius: 999px;
+        background: #0a0b0e;
+        z-index: 2;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08);
+    }
+
+    .phone-device-screen {
+        height: 100%;
+        border-radius: 1.15rem;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        background:
+            radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.16), transparent 40%),
+            linear-gradient(165deg, #1e3a5f 0%, #0f172a 45%, #1a1d26 100%);
+        color: white;
+    }
+
+    .phone-device.is-online .phone-device-screen {
+        background:
+            radial-gradient(circle at 80% 10%, rgba(59, 124, 255, 0.35), transparent 42%),
+            radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.2), transparent 40%),
+            linear-gradient(165deg, #1d4ed8 0%, #0f172a 55%, #111827 100%);
+    }
+
+    .phone-device.is-offline .phone-device-screen {
+        background:
+            radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08), transparent 45%),
+            linear-gradient(165deg, #374151 0%, #111827 100%);
+        filter: saturate(0.7);
+    }
+
+    .phone-device.is-starting .phone-device-screen {
+        background:
+            radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.35), transparent 45%),
+            linear-gradient(165deg, #0369a1 0%, #0f172a 100%);
+    }
+
+    .phone-device.is-error .phone-device-screen {
+        background:
+            radial-gradient(circle at 50% 20%, rgba(244, 114, 182, 0.28), transparent 40%),
+            linear-gradient(165deg, #7f1d1d 0%, #1f2937 100%);
+    }
+
+    .phone-device-screen img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .phone-device-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #94a3b8;
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.25);
+    }
+
+    .phone-device.is-online .phone-device-status-dot {
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.28);
+        animation: pulse-dot 1.8s ease infinite;
+    }
+
+    .phone-device.is-starting .phone-device-status-dot {
+        background: #38bdf8;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.28);
+        animation: pulse-dot 1s ease infinite;
+    }
+
+    .phone-device.is-error .phone-device-status-dot {
+        background: #f87171;
+        box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.28);
+    }
+
+    @keyframes pulse-dot {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.75; }
+    }
+
+    .phone-device-wallpaper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 1.85rem 0.7rem 0.75rem;
+        position: relative;
+        z-index: 1;
+        background:
+            linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, transparent 28%, rgba(0, 0, 0, 0.55) 100%);
+    }
+
+    .phone-device-icons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 7px;
+        margin-top: auto;
+        padding-bottom: 0.25rem;
+    }
+
+    .phone-device-icons span {
+        aspect-ratio: 1;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.16);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        display: grid;
+        place-items: center;
+        font-size: 0.6rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .phone-device-home {
+        width: 56px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.35);
+        margin: 0.25rem auto 0;
+    }
+}
