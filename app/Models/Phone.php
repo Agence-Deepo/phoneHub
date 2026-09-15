@@ -49,6 +49,29 @@ class Phone extends Model
         return $this->status === 'online';
     }
 
+    public function isLocalDemo(): bool
+    {
+        return str_starts_with((string) $this->geelark_id, 'demo_');
+    }
+
+    public function osLabel(): ?string
+    {
+        $os = $this->mobile_type
+            ?: data_get($this->equipment_info, 'osVersion')
+            ?: data_get($this->equipment_info, 'os_version');
+
+        if (filled($os)) {
+            return (string) $os;
+        }
+
+        $brand = data_get($this->equipment_info, 'deviceBrand');
+        $model = data_get($this->equipment_info, 'deviceModel');
+
+        return filled($brand) || filled($model)
+            ? trim($brand.' '.$model)
+            : null;
+    }
+
     public function statusLabel(): string
     {
         return match ($this->status) {
@@ -65,7 +88,7 @@ class Phone extends Model
         return match ($status) {
             0 => 'online',
             1 => 'starting',
-            2 => 'offline',
+            3 => 'error',
             default => 'offline',
         };
     }

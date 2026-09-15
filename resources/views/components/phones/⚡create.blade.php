@@ -19,19 +19,25 @@ class extends Component
     public string $remark = '';
     public string $region = '';
     public int $charge_mode = 0;
+    public string $formError = '';
 
     public function save(PhoneManager $manager)
     {
+        $this->formError = '';
+
         $this->validate([
             'name' => 'required|string|max:120',
             'mobile_type' => 'required|string',
             'group_name' => 'nullable|string|max:120',
             'tags' => 'nullable|string|max:255',
-            'proxy' => 'nullable|string|max:500',
+            'proxy' => ['required', 'string', 'max:500', 'regex:/^(https?|socks5):\/\//i'],
             'country' => 'nullable|string|max:80',
             'remark' => 'nullable|string|max:500',
             'region' => 'nullable|in:cn,sgp,us',
             'charge_mode' => 'in:0,1',
+        ], [
+            'proxy.required' => 'GeeLark exige un proxy pour créer un cloud phone.',
+            'proxy.regex' => 'Format attendu : http://…, https://… ou socks5://…',
         ]);
 
         try {
@@ -51,7 +57,15 @@ class extends Component
 
             return $this->redirect(route('phones.show', $phone), navigate: true);
         } catch (\Throwable $e) {
-            session()->flash('error', $e->getMessage());
+            $message = $e->getMessage();
+
+            if (str_contains(strtolower($message), 'proxy information')) {
+                $message = 'Proxy invalide ou manquant (GeeLark 45006). Utilise un proxy réel au format socks5://user:pass@host:port';
+            } elseif (str_contains(strtolower($message), 'check proxy')) {
+                $message = 'Le proxy a été rejeté par GeeLark (vérification échouée). Vérifie host/port/identifiants.';
+            }
+
+            $this->formError = $message;
         }
     }
 };
@@ -65,6 +79,12 @@ class extends Component
     </div>
 
     <form wire:submit="save" class="gl-card mx-auto max-w-2xl space-y-5 p-6 sm:p-8 animate-rise animate-rise-delay-1">
+        @if ($formError !== '')
+            <div class="rounded-2xl px-4 py-3 text-sm font-medium" style="background: rgba(239,68,68,0.12); color: #dc2626;">
+                {{ $formError }}
+            </div>
+        @endif
+
         <div>
             <label class="mb-1.5 block text-sm font-semibold">Nom</label>
             <input wire:model="name" type="text" class="gl-input" placeholder="ex. TikTok FR-01" required>
@@ -103,9 +123,10 @@ class extends Component
         </div>
 
         <div>
-            <label class="mb-1.5 block text-sm font-semibold">Proxy</label>
-            <input wire:model="proxy" type="text" class="gl-input" placeholder="socks5://user:pass@host:port">
-            <p class="mt-1 text-xs text-[var(--color-muted)]">http, https ou socks5</p>
+            <label class="mb-1.5 block text-sm font-semibold">Proxy <span class="text-red-500">*</span></label>
+            <input wire:model="proxy" type="text" class="gl-input" placeholder="socks5://user:pass@host:port" required>
+            <p class="mt-1 text-xs text-[var(--color-muted)]">Obligatoire. Formats : http://, https:// ou socks5:// — GeeLark vérifie la connexion.</p>
+            @error('proxy') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">

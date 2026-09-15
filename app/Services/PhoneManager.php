@@ -16,17 +16,32 @@ class PhoneManager
 
     public function create(array $data): Phone
     {
+        $profile = [
+            'profileName' => $data['name'],
+            'mobileLanguage' => 'default',
+        ];
+
+        if (! empty($data['proxy'])) {
+            $profile['proxyInformation'] = $data['proxy'];
+        }
+
+        if (! empty($data['group_name'])) {
+            $profile['profileGroup'] = $data['group_name'];
+        }
+
+        $tags = $this->parseTags($data['tags'] ?? null);
+        if (! empty($tags)) {
+            $profile['profileTags'] = $tags;
+        }
+
+        if (! empty($data['remark'])) {
+            $profile['profileNote'] = $data['remark'];
+        }
+
         $payload = [
             'mobileType' => $data['mobile_type'] ?? 'Android 13',
             'chargeMode' => (int) ($data['charge_mode'] ?? 0),
-            'data' => [[
-                'profileName' => $data['name'],
-                'proxyInformation' => $data['proxy'] ?: null,
-                'profileGroup' => $data['group_name'] ?: null,
-                'profileTags' => $this->parseTags($data['tags'] ?? null),
-                'profileNote' => $data['remark'] ?? null,
-                'mobileLanguage' => 'default',
-            ]],
+            'data' => [$profile],
         ];
 
         if (! empty($data['region'])) {
@@ -49,7 +64,7 @@ class PhoneManager
             'group_name' => $data['group_name'] ?? null,
             'tags' => $this->parseTags($data['tags'] ?? null),
             'proxy' => $data['proxy'] ?? null,
-            'mobile_type' => $data['mobile_type'] ?? 'Android 13',
+            'mobile_type' => $detail['equipmentInfo']['osVersion'] ?? ($data['mobile_type'] ?? 'Android 13'),
             'remark' => $data['remark'] ?? null,
             'equipment_info' => $detail['equipmentInfo'] ?? null,
             'last_synced_at' => now(),
@@ -104,9 +119,11 @@ class PhoneManager
         return $this->start($phone->fresh());
     }
 
-    public function delete(Phone $phone): void
+    public function delete(Phone $phone, bool $localOnly = false): void
     {
-        if ($phone->geelark_id) {
+        $remote = $phone->geelark_id && ! $phone->isLocalDemo() && ! $localOnly && ! $this->api->isDemoMode();
+
+        if ($remote) {
             if ($phone->status === 'online') {
                 try {
                     $this->stop($phone);
@@ -115,11 +132,24 @@ class PhoneManager
                 }
             }
 
-            $response = $this->api->deletePhones([$phone->geelark_id]);
+            try {
+                $response = $this->api->deletePhones([$phone->geelark_id]);
 
-            if (($response['data']['failAmount'] ?? 0) > 0 && ($response['data']['successAmount'] ?? 0) === 0) {
-                $fail = collect($response['data']['failDetails'] ?? [])->first();
-                throw new RuntimeException($fail['msg'] ?? 'Impossible de supprimer le téléphone');
+                if (($response['data']['failAmount'] ?? 0) > 0 && ($response['data']['successAmount'] ?? 0) === 0) {
+                    $fail = collect($response['data']['failDetails'] ?? [])->first();
+                    $msg = strtolower((string) ($fail['msg'] ?? ''));
+                    $code = (int) ($fail['code'] ?? 0);
+
+                    $missing = $code === 42001 || str_contains($msg, 'not found') || str_contains($msg, 'not exist');
+
+                    if (! $missing) {
+                        throw new RuntimeException($fail['msg'] ?? 'Impossible de supprimer le téléphone');
+                    }
+                }
+            } catch (RuntimeException $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+                throw new RuntimeException('Impossible de joindre GeeLark pour supprimer : '.$e->getMessage(), 0, $e);
             }
         }
 
@@ -245,25 +275,132 @@ class PhoneManager
             foreach ($items as $item) {
                 Phone::updateOrCreate(
                     ['geelark_id' => (string) $item['id']],
-                    [
-                        'name' => $item['serialName'] ?? 'Sans nom',
-                        'serial_no' => $item['serialNo'] ?? null,
-                        'status' => Phone::mapApiStatus($item['status'] ?? null),
-                        'group_name' => $item['group']['name'] ?? ($item['groupName'] ?? null),
-                        'tags' => collect($item['tags'] ?? [])->pluck('name')->filter()->values()->all()
-                            ?: ($item['tags'] ?? null),
-                        'proxy' => $item['proxy']['server'] ?? ($item['proxy'] ?? null),
-                        'equipment_info' => $item['equipmentInfo'] ?? null,
-                        'country' => $item['equipmentInfo']['countryName'] ?? null,
-                        'remark' => $item['remark'] ?? null,
-                        'last_synced_at' => now(),
-                    ]
+                    $this->attributesFromRemoteItem($item)
                 );
                 $count++;
             }
         });
 
         return $count;
+    }
+
+    public function syncStatuses(): int
+    {
+        if ($this->api->isDemoMode()) {
+            return 0;
+        }
+
+        $phones = Phone::query()
+            ->whereNotNull('geelark_id')
+            ->where('geelark_id', '!=', '')
+            ->get()
+            ->reject(fn (Phone $phone) => $phone->isLocalDemo())
+            ->values();
+
+        if ($phones->isEmpty()) {
+            return 0;
+        }
+
+        $updated = 0;
+
+        foreach ($phones->chunk(100) as $chunk) {
+            $needsDetails = $chunk->contains(fn (Phone $phone) => blank($phone->mobile_type) && blank(data_get($phone->equipment_info, 'osVersion')));
+
+            if ($needsDetails) {
+                $list = $this->api->listPhones([
+                    'ids' => $chunk->pluck('geelark_id')->values()->all(),
+                ]);
+
+                foreach ($list['data']['items'] ?? [] as $item) {
+                    $phone = $chunk->firstWhere('geelark_id', (string) ($item['id'] ?? ''));
+
+                    if ($phone) {
+                        $phone->fill($this->attributesFromRemoteItem($item));
+
+                        if ($phone->isDirty()) {
+                            $phone->save();
+                            $updated++;
+                        }
+                    }
+                }
+            }
+            $response = $this->api->queryStatus($chunk->pluck('geelark_id')->all());
+            $byId = $chunk->keyBy('geelark_id');
+
+            foreach ($response['data']['successDetails'] ?? [] as $detail) {
+                $phone = $byId->get((string) ($detail['id'] ?? ''));
+
+                if (! $phone) {
+                    continue;
+                }
+
+                $status = Phone::mapApiStatus(isset($detail['status']) ? (int) $detail['status'] : null);
+                $changes = [
+                    'status' => $status,
+                    'last_synced_at' => now(),
+                ];
+
+                if ($status === 'offline') {
+                    $changes['remote_url'] = null;
+                }
+
+                $phone->fill($changes);
+
+                if ($phone->isDirty()) {
+                    $phone->save();
+                    $updated++;
+                }
+            }
+        }
+
+        return $updated;
+    }
+
+    protected function attributesFromRemoteItem(array $item): array
+    {
+        $equipment = $item['equipmentInfo'] ?? null;
+        $os = is_array($equipment)
+            ? ($equipment['osVersion'] ?? $equipment['os_version'] ?? null)
+            : null;
+
+        $attributes = [
+            'name' => $item['serialName'] ?? 'Sans nom',
+            'serial_no' => $item['serialNo'] ?? null,
+            'status' => Phone::mapApiStatus(isset($item['status']) ? (int) $item['status'] : null),
+            'group_name' => $item['group']['name'] ?? ($item['groupName'] ?? null),
+            'tags' => collect($item['tags'] ?? [])->pluck('name')->filter()->values()->all()
+                ?: (is_array($item['tags'] ?? null) ? $item['tags'] : null),
+            'proxy' => $this->formatRemoteProxy($item['proxy'] ?? null),
+            'equipment_info' => $equipment,
+            'country' => is_array($equipment) ? ($equipment['countryName'] ?? null) : null,
+            'remark' => $item['remark'] ?? null,
+            'last_synced_at' => now(),
+        ];
+
+        if (filled($os)) {
+            $attributes['mobile_type'] = $os;
+        }
+
+        return $attributes;
+    }
+
+    protected function formatRemoteProxy(mixed $proxy): ?string
+    {
+        if (is_string($proxy) && filled($proxy)) {
+            return $proxy;
+        }
+
+        if (! is_array($proxy) || blank($proxy['server'] ?? null)) {
+            return null;
+        }
+
+        $scheme = $proxy['type'] ?? 'socks5';
+        $auth = filled($proxy['username'] ?? null)
+            ? $proxy['username'].':'.($proxy['password'] ?? '').'@'
+            : '';
+        $port = isset($proxy['port']) ? ':'.$proxy['port'] : '';
+
+        return $scheme.'://'.$auth.$proxy['server'].$port;
     }
 
     protected function ensureGeelarkId(Phone $phone): void

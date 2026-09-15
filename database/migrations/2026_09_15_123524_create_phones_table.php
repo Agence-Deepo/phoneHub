@@ -19,8 +19,8 @@ return new class extends Migration
             $table->json('tags')->nullable();
             $table->string('proxy')->nullable();
             $table->string('mobile_type')->nullable(); // Android 12, etc.
-            $table->string('remote_url')->nullable();
-            $table->string('screenshot_url')->nullable();
+            $table->text('remote_url')->nullable();
+            $table->text('screenshot_url')->nullable();
             $table->string('screenshot_task_id')->nullable();
             $table->text('remark')->nullable();
             $table->json('equipment_info')->nullable();

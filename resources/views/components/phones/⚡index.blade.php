@@ -21,6 +21,17 @@ class extends Component
     #[Url]
     public string $view = 'devices';
 
+    public string $actionError = '';
+
+    public function refreshStatuses(PhoneManager $manager): void
+    {
+        try {
+            $manager->syncStatuses();
+        } catch (\Throwable) {
+            // Keep the last known UI state if GeeLark is briefly unreachable.
+        }
+    }
+
     public function setView(string $view): void
     {
         $this->view = in_array($view, ['devices', 'table'], true) ? $view : 'devices';
@@ -28,41 +39,33 @@ class extends Component
 
     public function start(int $id, PhoneManager $manager): void
     {
-        try {
-            $manager->start(Phone::findOrFail($id));
-            session()->flash('success', 'Téléphone démarré.');
-        } catch (\Throwable $e) {
-            session()->flash('error', $e->getMessage());
-        }
+        $this->runAction(fn () => $manager->start(Phone::findOrFail($id)), 'Téléphone démarré.');
     }
 
     public function stop(int $id, PhoneManager $manager): void
     {
-        try {
-            $manager->stop(Phone::findOrFail($id));
-            session()->flash('success', 'Téléphone arrêté.');
-        } catch (\Throwable $e) {
-            session()->flash('error', $e->getMessage());
-        }
+        $this->runAction(fn () => $manager->stop(Phone::findOrFail($id)), 'Téléphone arrêté.');
     }
 
     public function restart(int $id, PhoneManager $manager): void
     {
-        try {
-            $manager->restart(Phone::findOrFail($id));
-            session()->flash('success', 'Téléphone redémarré.');
-        } catch (\Throwable $e) {
-            session()->flash('error', $e->getMessage());
-        }
+        $this->runAction(fn () => $manager->restart(Phone::findOrFail($id)), 'Téléphone redémarré.');
     }
 
     public function delete(int $id, PhoneManager $manager): void
     {
+        $this->runAction(fn () => $manager->delete(Phone::findOrFail($id)), 'Téléphone supprimé.');
+    }
+
+    protected function runAction(callable $action, string $success): void
+    {
+        $this->actionError = '';
+
         try {
-            $manager->delete(Phone::findOrFail($id));
-            session()->flash('success', 'Téléphone supprimé.');
+            $action();
+            session()->flash('success', $success);
         } catch (\Throwable $e) {
-            session()->flash('error', $e->getMessage());
+            $this->actionError = $e->getMessage();
         }
     }
 
@@ -86,11 +89,11 @@ class extends Component
 };
 ?>
 
-<div>
+<div wire:poll.5s="refreshStatuses">
     <div class="mb-8 flex flex-wrap items-end justify-between gap-4 animate-rise">
         <div>
             <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Phones</h1>
-            <p class="mt-1 text-sm text-[var(--color-muted)]">Liste, statut, proxy, groupes et actions</p>
+            <p class="mt-1 text-sm text-[var(--color-muted)]">Liste, statut, proxy — synchro GeeLark toutes les 5 s</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <div class="gl-view-toggle" role="group" aria-label="Mode d’affichage">
@@ -106,6 +109,12 @@ class extends Component
             <a href="{{ route('phones.create') }}" class="gl-btn gl-btn-primary">Créer un phone +</a>
         </div>
     </div>
+
+    @if ($actionError !== '')
+        <div class="mb-5 rounded-2xl px-4 py-3 text-sm font-medium" style="background: rgba(239,68,68,0.12); color: #dc2626;">
+            {{ $actionError }}
+        </div>
+    @endif
 
     <div class="mb-5 flex flex-wrap gap-3 animate-rise">
         <input wire:model.live.debounce.250ms="search" type="search" class="gl-input max-w-sm" placeholder="Rechercher nom, groupe, pays…">
@@ -141,7 +150,7 @@ class extends Component
                                         <div class="flex items-start justify-between gap-2">
                                             <div>
                                                 <div class="text-[9px] font-medium uppercase tracking-wider text-white/60">
-                                                    {{ $phone->mobile_type ?? 'Android' }}
+                                                    {{ $phone->osLabel() ?: 'Android' }}
                                                 </div>
                                                 <div class="mt-0.5 text-xs font-bold leading-tight">{{ Str::limit($phone->name, 16) }}</div>
                                             </div>
@@ -210,7 +219,7 @@ class extends Component
                                     <a href="{{ route('phones.show', $phone) }}" class="font-semibold hover:text-[var(--color-blue)]">
                                         {{ $phone->name }}
                                     </a>
-                                    <div class="mt-0.5 text-xs text-[var(--color-muted)]">{{ $phone->mobile_type ?? 'Android' }} · {{ Str::limit($phone->geelark_id, 16) }}</div>
+                                    <div class="mt-0.5 text-xs text-[var(--color-muted)]">{{ $phone->osLabel() ?: 'Android' }} · {{ Str::limit($phone->geelark_id, 16) }}</div>
                                     @if ($phone->tags)
                                         <div class="mt-2 flex flex-wrap gap-1">
                                             @foreach ($phone->tags as $tag)

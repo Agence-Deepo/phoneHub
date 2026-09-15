@@ -17,6 +17,7 @@ class extends Component
     public string $app_version_id = '';
     public string $package_name = '';
     public string $automation_type = 'custom';
+    public string $actionError = '';
 
     public function mount(Phone $phone): void
     {
@@ -46,7 +47,7 @@ class extends Component
 
             return $this->redirect(route('phones.index'), navigate: true);
         } catch (\Throwable $e) {
-            session()->flash('error', $e->getMessage());
+            $this->actionError = $e->getMessage();
         }
     }
 
@@ -150,12 +151,18 @@ class extends Component
         </div>
     </div>
 
+    @if ($actionError !== '')
+        <div class="mb-6 rounded-2xl px-4 py-3 text-sm font-medium" style="background: rgba(239,68,68,0.12); color: #dc2626;">
+            {{ $actionError }}
+        </div>
+    @endif
+
     <div class="grid gap-5 lg:grid-cols-3">
         <div class="gl-card space-y-4 p-6 lg:col-span-2 animate-rise animate-rise-delay-1">
             <h2 class="text-lg font-bold">Informations</h2>
             <div class="grid gap-4 sm:grid-cols-2">
                 @foreach ([
-                    'OS' => $phone->mobile_type,
+                    'OS' => $phone->osLabel(),
                     'Série' => $phone->serial_no,
                     'Groupe' => $phone->group_name,
                     'Pays' => $phone->country,

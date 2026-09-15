@@ -1,0 +1,88 @@
+services:
+  app:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_CONNECTION: mysql
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - phonehub_storage:/var/www/html/storage
+    networks:
+      - phonehub
+
+  nginx:
+    build:
+      context: .
+      target: nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:80"
+    depends_on:
+      - app
+    networks:
+      - phonehub
+
+  queue:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_CONNECTION: mysql
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - phonehub_storage:/var/www/html/storage
+    command: php artisan queue:work --sleep=1 --tries=3 --timeout=120
+    depends_on:
+      - app
+    networks:
+      - phonehub
+
+  scheduler:
+    build:
+      context: .
+      target: app
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DB_CONNECTION: mysql
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-3306}
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - phonehub_storage:/var/www/html/storage
+    command: php artisan schedule:work
+    depends_on:
+      - app
+    networks:
+      - phonehub
+
+volumes:
+  phonehub_storage:
+
+networks:
+  phonehub:
+    driver: bridge
