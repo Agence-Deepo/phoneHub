@@ -9,10 +9,6 @@ services:
     env_file:
       - .env
     environment:
-      APP_ENV: ${APP_ENV:-production}
-      DB_CONNECTION: mysql
-      DB_HOST: 172.239.44.174
-      DB_PORT: "3306"
       RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
     volumes:
       - ./.env:/var/www/html/.env:ro
@@ -42,10 +38,6 @@ services:
     env_file:
       - .env
     environment:
-      APP_ENV: ${APP_ENV:-production}
-      DB_CONNECTION: mysql
-      DB_HOST: host.docker.internal
-      DB_PORT: "3306"
       RUN_MIGRATIONS: "false"
     volumes:
       - ./.env:/var/www/html/.env:ro
@@ -66,10 +58,6 @@ services:
     env_file:
       - .env
     environment:
-      APP_ENV: ${APP_ENV:-production}
-      DB_CONNECTION: mysql
-      DB_HOST: host.docker.internal
-      DB_PORT: "3306"
       RUN_MIGRATIONS: "false"
     volumes:
       - ./.env:/var/www/html/.env:ro
